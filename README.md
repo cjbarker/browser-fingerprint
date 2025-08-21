@@ -145,6 +145,95 @@ fi
 kill $SERVER_PID
 ```
 
+### Coverage Profiling for Integration Tests
+
+Go provides built-in coverage profiling support that can be used with integration tests:
+
+#### 1. Build with Coverage Support
+
+```bash
+# Build the server with coverage instrumentation
+go build -cover -o fingerprint-server-coverage main.go
+```
+
+#### 2. Run Server with Coverage Collection
+
+```bash
+# Set coverage data output file
+export GOCOVERDIR=./coverage-data
+mkdir -p $GOCOVERDIR
+
+# Run the instrumented server
+./fingerprint-server-coverage &
+SERVER_PID=$!
+```
+
+#### 3. Execute Integration Tests
+
+```bash
+# Run your integration tests while server is running
+curl -s http://localhost:8080/fingerprint > /dev/null
+curl -s -H "User-Agent: TestAgent" http://localhost:8080/fingerprint > /dev/null
+curl -s -H "Accept-Language: fr-FR" http://localhost:8080/fingerprint > /dev/null
+
+# Stop the server to flush coverage data
+kill $SERVER_PID
+```
+
+#### 4. Generate Coverage Report
+
+```bash
+# Convert binary coverage data to text format
+go tool covdata textfmt -i=./coverage-data -o=coverage.out
+
+# View coverage report
+go tool cover -func=coverage.out
+
+# Generate HTML coverage report
+go tool cover -html=coverage.out -o=coverage.html
+```
+
+#### 5. Complete Coverage Test Script
+
+```bash
+#!/bin/bash
+# coverage-test.sh
+
+echo "Running integration tests with coverage..."
+
+# Setup
+export GOCOVERDIR=./coverage-data
+mkdir -p $GOCOVERDIR
+go build -cover -o fingerprint-server-coverage main.go
+
+# Start instrumented server
+./fingerprint-server-coverage &
+SERVER_PID=$!
+sleep 2
+
+# Integration tests
+echo "Running integration tests..."
+curl -s http://localhost:8080/fingerprint > /dev/null
+curl -s -H "User-Agent: Chrome/100" http://localhost:8080/fingerprint > /dev/null
+curl -s -H "Accept-Language: es-ES" http://localhost:8080/fingerprint > /dev/null
+curl -s -H "X-Forwarded-For: 192.168.1.100" http://localhost:8080/fingerprint > /dev/null
+
+# Stop server and generate reports
+kill $SERVER_PID
+wait $SERVER_PID 2>/dev/null
+
+echo "Generating coverage reports..."
+go tool covdata textfmt -i=./coverage-data -o=coverage.out
+go tool cover -func=coverage.out
+go tool cover -html=coverage.out -o=coverage.html
+
+echo "Coverage report saved to coverage.html"
+
+# Cleanup
+rm -rf ./coverage-data
+rm fingerprint-server-coverage
+```
+
 ## API Endpoints
 
 ### GET /fingerprint
