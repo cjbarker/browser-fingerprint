@@ -43,20 +43,34 @@ The fingerprints are:
    go mod init browser-fingerprint
    ```
 
-3. **Compile the application**:
+3. **Install dependencies**:
    ```bash
-   go build -o fingerprint-server main.go
+   make deps
+   ```
+
+4. **Compile the application**:
+   ```bash
+   make build
    ```
 
 ## Running the Server
 
-### Method 1: Direct execution
+### Using Makefile (Recommended)
 ```bash
-go run main.go
+# Build and run compiled binary
+make run
+
+# Run directly from source (development)
+make run-dev
 ```
 
-### Method 2: Compiled binary
+### Manual Methods
 ```bash
+# Direct execution from source
+go run main.go
+
+# Compiled binary
+go build -o fingerprint-server main.go
 ./fingerprint-server
 ```
 
@@ -64,6 +78,59 @@ The server will start on port 8080 and display:
 ```
 Browser fingerprinting server starting on port :8080
 Send requests to http://localhost:8080/fingerprint
+```
+
+## Makefile Targets
+
+This project includes a comprehensive Makefile with the following targets:
+
+### Building & Compilation
+- **`make build`** - Build the application binary (`fingerprint-server`)
+- **`make build-coverage`** - Build with coverage instrumentation for testing
+- **`make clean`** - Remove all build artifacts and coverage data
+- **`make all`** - Default target (clean + build)
+
+### Running the Application
+- **`make run`** - Build and run the compiled binary
+- **`make run-dev`** - Run directly from source code (development mode)
+
+### Testing
+- **`make test`** - Run basic integration tests against live server
+- **`make test-coverage`** - Run comprehensive tests with coverage profiling
+- **`make coverage-report`** - Generate coverage reports from existing data
+- **`make coverage-view`** - Generate and open coverage report in browser
+
+### Code Quality & Linting
+- **`make lint`** - Run golangci-lint (auto-installs if not present)
+- **`make fmt`** - Format code with `go fmt`
+- **`make vet`** - Run `go vet` for suspicious constructs
+- **`make check`** - Run all quality checks (fmt + vet + lint)
+
+### Setup & Maintenance
+- **`make deps`** - Install and tidy Go dependencies
+- **`make setup-scripts`** - Create test script files in `./scripts/`
+
+### Workflows
+- **`make ci`** - Full CI pipeline (clean → deps → check → build → test)
+- **`make dev`** - Development workflow (clean → deps → fmt → build → test)
+
+### Help
+- **`make help`** - Display all available targets with descriptions
+
+### Quick Start Examples
+
+```bash
+# Complete development setup
+make setup-scripts dev
+
+# Run quality checks and tests
+make check test-coverage
+
+# Full CI pipeline
+make ci
+
+# View test coverage
+make coverage-view
 ```
 
 ## Testing
