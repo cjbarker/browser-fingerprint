@@ -373,4 +373,6 @@ cannot find module providing package
 
 ## License
 
-This project is provided as-is for educational and defensive security purposes.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+This project is provided for educational and defensive security purposes.
