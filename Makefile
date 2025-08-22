@@ -39,9 +39,57 @@ run-dev:
 	@echo "Running from source..."
 	go run $(MAIN_FILE)
 
+# Check if port is in use and show process info
+.PHONY: check-port
+check-port:
+	@echo "Checking port $(PORT)..."
+	@if netstat -an | grep -q ":$(PORT).*LISTEN"; then \
+		echo "Port $(PORT) is in use:"; \
+		if command -v lsof >/dev/null 2>&1; then \
+			lsof -i :$(PORT); \
+		else \
+			netstat -tulpn 2>/dev/null | grep ":$(PORT)" || netstat -an | grep ":$(PORT)"; \
+		fi; \
+	else \
+		echo "Port $(PORT) is available"; \
+	fi
+
+# Kill process running on the application port
+.PHONY: kill-port
+kill-port:
+	@echo "Killing process on port $(PORT)..."
+	@if command -v lsof >/dev/null 2>&1; then \
+		PID=$$(lsof -ti :$(PORT)); \
+		if [ -n "$$PID" ]; then \
+			echo "Killing process $$PID on port $(PORT)"; \
+			kill -TERM $$PID 2>/dev/null || kill -KILL $$PID 2>/dev/null; \
+			sleep 1; \
+			if kill -0 $$PID 2>/dev/null; then \
+				echo "Force killing process $$PID"; \
+				kill -KILL $$PID 2>/dev/null; \
+			fi; \
+			echo "Process killed successfully"; \
+		else \
+			echo "No process found on port $(PORT)"; \
+		fi; \
+	elif command -v fuser >/dev/null 2>&1; then \
+		if fuser $(PORT)/tcp >/dev/null 2>&1; then \
+			echo "Killing process on port $(PORT)"; \
+			fuser -k $(PORT)/tcp; \
+			echo "Process killed successfully"; \
+		else \
+			echo "No process found on port $(PORT)"; \
+		fi; \
+	else \
+		echo "Neither lsof nor fuser available. Cannot kill process automatically."; \
+		echo "Please manually kill the process using:"; \
+		echo "  netstat -tulpn | grep :$(PORT)"; \
+		echo "  kill <PID>"; \
+	fi
+
 # Run basic functional tests
 .PHONY: test
-test:
+test: setup-scripts
 	@echo "Running basic tests..."
 	@./scripts/test.sh
 
@@ -117,6 +165,7 @@ clean:
 	@rm -f $(COVERAGE_OUT)
 	@rm -f $(COVERAGE_HTML)
 	@rm -rf $(COVERAGE_DIR)
+	@rm -rf ./scripts
 	@echo "Clean completed"
 
 # Install dependencies
@@ -160,8 +209,8 @@ setup-scripts:
 	@echo 'fi' >> scripts/test.sh
 	@echo '' >> scripts/test.sh
 	@echo '# Test identical requests (idempotency)' >> scripts/test.sh
-	@echo 'RESPONSE1=$$(curl -s http://localhost:8080/fingerprint | grep -o '\''"fingerprint":"[^"]*"'\'' | cut -d'\''"'\'' -f4)' >> scripts/test.sh
-	@echo 'RESPONSE2=$$(curl -s http://localhost:8080/fingerprint | grep -o '\''"fingerprint":"[^"]*"'\'' | cut -d'\''"'\'' -f4)' >> scripts/test.sh
+	@echo 'RESPONSE1=$$(curl -s http://localhost:8080/fingerprint | grep -o '\''"fingerprint": "[^"]*"'\'' | cut -d'\''"'\'' -f4)' >> scripts/test.sh
+	@echo 'RESPONSE2=$$(curl -s http://localhost:8080/fingerprint | grep -o '\''"fingerprint": "[^"]*"'\'' | cut -d'\''"'\'' -f4)' >> scripts/test.sh
 	@echo '' >> scripts/test.sh
 	@echo 'if [ "$$RESPONSE1" = "$$RESPONSE2" ]; then' >> scripts/test.sh
 	@echo '    echo "✅ Idempotency test passed"' >> scripts/test.sh
@@ -171,7 +220,7 @@ setup-scripts:
 	@echo 'fi' >> scripts/test.sh
 	@echo '' >> scripts/test.sh
 	@echo '# Test different headers produce different fingerprints' >> scripts/test.sh
-	@echo 'RESPONSE3=$$(curl -s -H "User-Agent: DifferentAgent/1.0" http://localhost:8080/fingerprint | grep -o '\''"fingerprint":"[^"]*"'\'' | cut -d'\''"'\'' -f4)' >> scripts/test.sh
+	@echo 'RESPONSE3=$$(curl -s -H "User-Agent: DifferentAgent/1.0" http://localhost:8080/fingerprint | grep -o '\''"fingerprint": "[^"]*"'\'' | cut -d'\''"'\'' -f4)' >> scripts/test.sh
 	@echo '' >> scripts/test.sh
 	@echo 'if [ "$$RESPONSE1" != "$$RESPONSE3" ]; then' >> scripts/test.sh
 	@echo '    echo "✅ Uniqueness test passed"' >> scripts/test.sh
@@ -275,6 +324,8 @@ help:
 	@echo "Running:"
 	@echo "  run                - Build and run the application"
 	@echo "  run-dev            - Run directly from source (development)"
+	@echo "  check-port         - Check if port $(PORT) is in use and show process info"
+	@echo "  kill-port          - Kill process running on port $(PORT)"
 	@echo ""
 	@echo "Testing:"
 	@echo "  test               - Run basic integration tests"

@@ -93,6 +93,8 @@ This project includes a comprehensive Makefile with the following targets:
 ### Running the Application
 - **`make run`** - Build and run the compiled binary
 - **`make run-dev`** - Run directly from source code (development mode)
+- **`make check-port`** - Check if port 8080 is in use and show process info
+- **`make kill-port`** - Kill any process running on port 8080
 
 ### Testing
 - **`make test`** - Run basic integration tests against live server
@@ -131,6 +133,11 @@ make ci
 
 # View test coverage
 make coverage-view
+
+# Port management examples
+make check-port              # Check if port 8080 is busy
+make kill-port run          # Kill existing process and restart
+make kill-port run-dev      # Clean development restart
 ```
 
 ## Testing
